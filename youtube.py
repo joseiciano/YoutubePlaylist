@@ -1,40 +1,52 @@
 import os
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 
 youtube = build('youtube', 'v3', developerKey=API_KEY)
 
-request = youtube.playlistItems().list(
+url_link = 'https://www.youtube.com/playlist?list=PL4AWxkId50utoYIbd64M7E1IzTu6ZYadt'
+playlist_id = url_link.split('=')[1]
+
+# Get playlist name
+request = youtube.playlists().list(
     part='snippet',
-    playlistId='PL4AWxkId50utoYIbd64M7E1IzTu6ZYadt'
+    id=playlist_id
 )
 
+response = request.execute()
+playlist_name = response['items'][0]['snippet']['localized']['title']
+playlist_name = playlist_name.replace(' ', '_')
+
+# Generate request body
+request = youtube.playlistItems().list(
+    part='snippet',
+    playlistId=playlist_id
+)
+
+# Make request
 response = request.execute()
 
 videos = []
 
-# print(id_response["items"])
-# print(id_response["items"][0]['id'])
-for item in response['items']:
-    print(item['snippet'].keys())
-    print(item['snippet']['publishedAt'])
-    {
-        'title': item['snippet']['title'],
-        'description': item['snippet']['description'],
-        'channel_id': item['snippet']['channelId'],
-        'published_at': item['snippet']['publishedAt']
-    }
-    title = item['snippet']['title']
-    description = item['snippet']['description']
-    channel_id = item['snippet']['channelId']
-    published_at = item['snippet']['publishedAt']
-    video_id = item['snippet']['resourceId']['videoId']
-    break
-# while snippet_response["nextPageToken"]:
+while response:
+    for item in response['items']:
+        videos.append({
+            'title': item['snippet']['title'],
+            'channel_id': item['snippet']['channelId'],
+            'published_at': item['snippet']['publishedAt'],
+            'video_id': item['snippet']['resourceId']['videoId']
+        })
 
-# print(snippet_response.keys())
-# print(id_response["items"])
-# print(snippet_response["items"][0]["snippet"].keys())
+    request = youtube.playlistItems().list(
+        part='snippet',
+        playlistId='PL4AWxkId50utoYIbd64M7E1IzTu6ZYadt',
+        pageToken=response.get('nextPageToken', None)
+    )
+
+json_string = json.dumps(videos, indent=4)
+with open(f'{playlist_name}.json', 'w') as f:
+    f.write(json_string)
