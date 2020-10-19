@@ -64,6 +64,5 @@ def get_playlist_info(playlist_id):
             pageToken=response.get('nextPageToken', None)
         )
         response = request.execute()
-        break
 
     return videos
